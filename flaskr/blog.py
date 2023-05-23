@@ -1,9 +1,10 @@
-from flask import Flask
+from flask import render_template, Flask
 
 
 app = Flask(__name__)
 
 
-@app.route('/')     # 装饰器，调用下面的函数
+@app.route("/")
 def index():
-    return 'MyBlog'
+    return render_template("index.html")
+
