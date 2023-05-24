@@ -1,8 +1,9 @@
-from flask import render_template, Flask
+from flask import render_template, Flask, request, url_for, flash, redirect
 import sqlite3
 
 
 app = Flask(__name__)
+app.config['SECRET_KEY'] = 'sonodaumi'  # 密钥，加密字符串
 
 
 def get_db_conn():
@@ -26,6 +27,23 @@ def index():
 
 @app.route('/posts/new', methods=('GET', 'POST'))
 def new():
+    if request.method == 'POST':
+        title = request.form['title']
+        content = request.form['content']
+
+        if not title:
+            flash('标题不能为空')
+        elif not content:
+            flash('内容不能为空')
+        else:
+            conn = get_db_conn()
+            conn.execute('insert into posts (title, content) values (?, ?)', (title, content))
+            conn.commit()
+            conn.close()
+            flash('文章发布成功')
+            return redirect(url_for('index'))
+
+
     return render_template('new.html')
 
 
