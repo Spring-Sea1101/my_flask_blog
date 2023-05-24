@@ -1,9 +1,46 @@
-from flask import render_template, Flask, request, url_for, flash, redirect
+from flask import render_template, Flask, request, url_for, flash, redirect, g, session
+from dataclasses import dataclass
 import sqlite3
 
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'sonodaumi'  # 密钥，加密字符串
+
+
+@dataclass
+class User:
+    id: int
+    username: str
+    password: str
+
+users = [
+    User(1, "Harumi", "sonodaumi1101"),
+]
+
+
+@app.before_request
+def before_request():
+    g.user = None
+    if 'user_id' in session:
+        user = [u for u in users if u.id == session['user_id']][0]
+        g.user = user
+
+
+@app.route("/login", methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        # 登录
+        session.pop('user_id', None)
+        username = request.form.get("username", None)
+        password = request.form.get("password", None)
+        user = [u for u in users if u.username==username]
+        if len(user) > 0:
+            user = user[0]
+        if user and user.password == password:
+            session['user_id'] = user.id
+            return redirect(url_for('index'))
+
+    return render_template("login.html")
 
 
 def get_db_conn():
@@ -20,6 +57,9 @@ def get_post(post_id):
 
 @app.route("/")
 def index():
+    if not g.user:
+        return redirect(url_for('login'))
+
     conn = get_db_conn()
     posts = conn.execute('select * from posts').fetchall()
     return render_template("index.html", posts=posts)
