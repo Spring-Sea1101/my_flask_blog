@@ -1,20 +1,37 @@
-import sqlite3
+import os
 
-conn = sqlite3.connect('database.db')
+from flask import Flask
 
-with open('db.sql') as f:
-    conn.executescript(f.read())
 
-# 创建一个执行句柄，用来执行后面的语句
-cur = conn.cursor()
+def create_app(test_config=None):
+    # create and configure the app
+    app = Flask(__name__, instance_relative_config=True)
+    app.config.from_mapping(
+        SECRET_KEY='dev',
+        DATABASE=os.path.join(app.instance_path, 'flaskr.sqlite'),
+    )
 
-cur.execute("INSERT INTO posts (title, content) VALUES (?, ?)",
-            ('test1', 'hello1')
-            )
+    if test_config is None:
+        # load the instance config, if it exists, when not testing
+        app.config.from_pyfile('config.py', silent=True)
+    else:
+        # load the test config if passed in
+        app.config.from_mapping(test_config)
 
-cur.execute("INSERT INTO posts (title, content) VALUES (?, ?)",
-            ('test2', 'hello2')
-            )
+    # ensure the instance folder exists
+    try:
+        os.makedirs(app.instance_path)
+    except OSError:
+        pass
 
-conn.commit()
-conn.close()
+    from . import db
+    db.init_app(app)
+
+    from . import auth
+    app.register_blueprint(auth.bp)
+
+    from . import blog
+    app.register_blueprint(blog.bp)
+    app.add_url_rule('/', endpoint='index')
+
+    return app
